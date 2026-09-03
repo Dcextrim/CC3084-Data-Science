@@ -1,0 +1,12 @@
+jupyter
+matplotlib
+networkx
+nltk
+numpy
+pandas
+plotly
+scikit-learn
+scipy
+seaborn
+spacy
+wordcloud

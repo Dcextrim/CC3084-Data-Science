@@ -1,0 +1,3 @@
+# Conservar la carpeta, pero no versionar resultados generados.
+*
+!.gitignore
