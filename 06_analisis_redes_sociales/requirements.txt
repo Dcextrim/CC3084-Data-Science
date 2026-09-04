@@ -1,12 +1,10 @@
-jupyter
-matplotlib
-networkx
-nltk
-numpy
-pandas
-plotly
-scikit-learn
-scipy
-seaborn
-spacy
-wordcloud
+emoji>=2.14,<3
+jupyter>=1.1,<2
+matplotlib>=3.9,<4
+networkx>=3.4,<4
+numpy>=2,<3
+pandas>=2.2,<4
+scipy>=1.14,<2
+seaborn>=0.13,<1
+spacy>=3.8,<3.9
+es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl
