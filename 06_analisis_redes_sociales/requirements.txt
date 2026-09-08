@@ -7,4 +7,7 @@ pandas>=2.2,<4
 scipy>=1.14,<2
 seaborn>=0.13,<1
 spacy>=3.8,<3.9
+sentencepiece>=0.2,<1
+torch>=2.8,<3
+transformers>=4.55,<5
 es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl

@@ -1,4 +1,4 @@
-"""Rutas y contratos compartidos por el avance del Laboratorio 6."""
+"""Rutas y contratos compartidos por el Laboratorio 6."""
 
 from pathlib import Path
 
@@ -15,6 +15,14 @@ COMMENTS_CLEAN = PROCESSED_DIR / "youtube_comments_clean.csv"
 COMMENTS_INTEGRATED = PROCESSED_DIR / "youtube_comments_integrated.csv"
 NETWORK_NODES = PROCESSED_DIR / "network_nodes.csv"
 NETWORK_EDGES = PROCESSED_DIR / "network_edges.csv"
+AUTHOR_PROJECTION_EDGES = PROCESSED_DIR / "author_projection_edges.csv"
+VIDEO_PROJECTION_EDGES = PROCESSED_DIR / "video_projection_edges.csv"
+NETWORK_METRICS = PROCESSED_DIR / "network_metrics.csv"
+DEGREE_DISTRIBUTIONS = PROCESSED_DIR / "degree_distributions.csv"
+VIDEO_COMMUNITIES = PROCESSED_DIR / "video_communities.csv"
+NODE_CENTRALITIES = PROCESSED_DIR / "node_centralities.csv"
+COMMENTS_SENTIMENT = PROCESSED_DIR / "youtube_comments_sentiment.csv"
+MODEL_CACHE = ROOT / ".cache" / "huggingface"
 
 VIDEO_COLUMNS = [
     "video_id",

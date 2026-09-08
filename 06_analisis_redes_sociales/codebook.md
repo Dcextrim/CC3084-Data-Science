@@ -141,6 +141,105 @@ Se incluyen todos los videos del archivo original. Un video con cero comentarios
 
 Una arista significa únicamente **participación observada**: el autor publicó al menos un comentario principal en el video. No implica amistad, respuesta directa, conversación, aprobación ni exposición completa al contenido.
 
+## Proyecciones
+
+### `author_projection_edges.csv`
+
+| Variable | Definición |
+|---|---|
+| `source`, `target` | nodos `author::<author_channel_id>` conectados por coparticipación. |
+| `weight` | número de **videos distintos** comentados por ambos autores. |
+| `projection` | constante `author-author`. |
+
+### `video_projection_edges.csv`
+
+| Variable | Definición |
+|---|---|
+| `source`, `target` | nodos `video::<video_id>` con audiencia compartida. |
+| `weight` | número de **autores distintos** que comentaron ambos videos. |
+| `projection` | constante `video-video`. |
+
+Los pesos de la red bipartita no se suman al proyectar. Un vecino común cuenta
+una sola vez, aunque el autor haya escrito varios comentarios en el video. Las
+proyecciones conservan también los nodos aislados. Coparticipación no implica
+amistad, conversación, acuerdo ni exposición completa.
+
+## Topología y fragmentación
+
+### `network_metrics.csv`
+
+Cada fila resume la red bipartita o una proyección.
+
+| Variable | Definición |
+|---|---|
+| `nodes`, `edges` | número de nodos y aristas. |
+| `density` | aristas observadas como proporción de las posibles en una red simple no dirigida. |
+| `mean_degree`, `median_degree`, `p90_degree`, `max_degree` | resumen de la distribución de vecinos distintos. |
+| `isolates`, `leaves` | nodos de grado 0 y grado 1. |
+| `components` | número de componentes conexas. |
+| `largest_component_nodes`, `largest_component_share` | tamaño absoluto y relativo de la componente mayor. |
+| `node_connectivity` | mínimo de nodos cuya eliminación desconecta la red completa; es 0 si ya está desconectada. |
+| `largest_component_node_connectivity` | misma medida sobre la componente mayor. |
+| `transitivity` | proporción global de triadas cerradas; en la bipartita es 0 por construcción. |
+| `articulation_points` | nodos cuya eliminación aumenta el número de componentes. |
+
+`degree_distributions.csv` contiene `network`, `degree`, `nodes` y
+`node_share`, para auditar cuántos nodos presentan cada grado.
+
+## Comunidades de videos
+
+### `video_communities.csv`
+
+| Variable | Definición |
+|---|---|
+| `node_id` | ID interno del video. |
+| `community_id` | comunidad Louvain numerada desde 1, ordenada por tamaño. |
+| `community_size` | videos incluidos en la comunidad. |
+
+Louvain se ajusta con semilla 42 y pesos de autores compartidos sobre la
+proyección video-video activa. Los videos de grado 0 se excluyen del ajuste
+porque no aportan evidencia relacional y solo formarían grupos unitarios. La
+modularidad y la caracterización completa se reportan en el notebook.
+
+## Centralidades
+
+### `node_centralities.csv`
+
+| Variable | Definición |
+|---|---|
+| `degree` | videos distintos por autor o autores distintos por video. |
+| `weighted_degree` | comentarios asociados con el nodo en la red bipartita. |
+| `normalized_degree` | grado dividido entre el tamaño del conjunto opuesto. |
+| `betweenness` | intermediación normalizada sobre caminos mínimos no ponderados. |
+| `pagerank` | PageRank que utiliza el número de comentarios como peso. |
+| `is_articulation` | indica si eliminar el nodo aumenta los componentes. |
+| `betweenness_rank_within_type` | posición de intermediación comparada únicamente con nodos del mismo tipo. |
+
+El peso representa intensidad, no distancia; por ello la intermediación se
+calcula sin pasar `weight` como longitud. Estas medidas describen posición en
+la red observada y no prueban influencia causal.
+
+## Sentimiento
+
+### `youtube_comments_sentiment.csv`
+
+El texto de entrada es `texto_original`, sin traducción. Solo se sustituyen URL
+y menciones por los marcadores recomendados por el modelo; se conservan
+negaciones, puntuación, mayúsculas, hashtags y emojis.
+
+| Variable | Definición |
+|---|---|
+| `p_negative`, `p_neutral`, `p_positive` | probabilidades producidas por el modelo. |
+| `sentiment_label` | clase de probabilidad máxima. |
+| `sentiment_confidence` | probabilidad máxima, usada como indicador de incertidumbre. |
+| `sentiment_score` | `p_positive - p_negative`, entre -1 y 1. |
+| `sentiment_model` | modelo exacto usado para reproducibilidad. |
+
+Se utiliza [CardiffNLP XLM-R sentiment](https://huggingface.co/cardiffnlp/twitter-xlm-roberta-base-sentiment),
+un modelo multilingüe de texto social ajustado con ocho idiomas, incluido
+español. Sus etiquetas son estimaciones automáticas. No hay verdad de terreno
+local y existe cambio de dominio entre tuits y comentarios de YouTube.
+
 ## Limitaciones que afectan la lectura
 
 - Solo se observan los comentarios recolectados; cero comentarios en el archivo no equivale a cero comentarios en YouTube.
@@ -151,3 +250,5 @@ Una arista significa únicamente **participación observada**: el autor publicó
 - No se conoce quién respondió a quién y `reply_count` no permite crear relaciones entre autores.
 - Los nombres y handles pueden cambiar o repetirse; las redes utilizan IDs.
 - Asociación, coparticipación y centralidad descriptiva no demuestran causalidad ni representan a toda Guatemala o a todos los usuarios de YouTube.
+- Las comunidades dependen del algoritmo, los pesos, la semilla y la cobertura de comentarios; no son grupos sociales verificados.
+- El sentimiento puede equivocarse con sarcasmo, modismos, texto mixto o contexto externo y no se validó con etiquetas humanas de esta muestra.

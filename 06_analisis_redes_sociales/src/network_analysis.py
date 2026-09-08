@@ -1,11 +1,22 @@
-"""Construcción de la red bipartita autor–video para el ejercicio 4."""
+"""Construcción y análisis de las redes autor-video del Laboratorio 6."""
 
 from __future__ import annotations
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 
-from config import NETWORK_EDGES, NETWORK_NODES, PROCESSED_DIR
+from config import (
+    AUTHOR_PROJECTION_EDGES,
+    DEGREE_DISTRIBUTIONS,
+    NETWORK_EDGES,
+    NETWORK_METRICS,
+    NETWORK_NODES,
+    NODE_CENTRALITIES,
+    PROCESSED_DIR,
+    VIDEO_COMMUNITIES,
+    VIDEO_PROJECTION_EDGES,
+)
 from data_processing import assert_condition
 
 
@@ -158,3 +169,184 @@ def save_network_tables(nodes: pd.DataFrame, edges: pd.DataFrame) -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     nodes.to_csv(NETWORK_NODES, index=False, encoding="utf-8")
     edges.to_csv(NETWORK_EDGES, index=False, encoding="utf-8")
+
+
+def build_projections(graph: nx.Graph) -> tuple[nx.Graph, nx.Graph]:
+    """Proyecta la red bipartita preservando también los nodos aislados.
+
+    En la proyección de autores, ``weight`` cuenta videos compartidos. En la
+    proyección de videos, cuenta autores compartidos. El número de comentarios
+    de la arista bipartita no se usa para inflar estas coincidencias.
+    """
+
+    authors = [n for n, data in graph.nodes(data=True) if data["node_type"] == "author"]
+    videos = [n for n, data in graph.nodes(data=True) if data["node_type"] == "video"]
+    author_projection = nx.algorithms.bipartite.weighted_projected_graph(graph, authors)
+    video_projection = nx.algorithms.bipartite.weighted_projected_graph(graph, videos)
+
+    for projection in (author_projection, video_projection):
+        for node in projection:
+            projection.nodes[node].update(graph.nodes[node])
+        assert_condition(
+            all(data["weight"] >= 1 for _, _, data in projection.edges(data=True)),
+            "La proyección contiene pesos no positivos",
+        )
+    return author_projection, video_projection
+
+
+def projection_edge_table(graph: nx.Graph, projection_type: str) -> pd.DataFrame:
+    """Convierte una proyección en una tabla auditable de aristas."""
+
+    rows = [
+        {"source": u, "target": v, "weight": int(data["weight"]), "projection": projection_type}
+        for u, v, data in graph.edges(data=True)
+    ]
+    return pd.DataFrame(rows, columns=["source", "target", "weight", "projection"])
+
+
+def _largest_component(graph: nx.Graph) -> nx.Graph:
+    """Devuelve una copia de la componente más grande o un grafo vacío."""
+
+    if graph.number_of_nodes() == 0:
+        return graph.copy()
+    members = max(nx.connected_components(graph), key=len)
+    return graph.subgraph(members).copy()
+
+
+def network_summary(graph: nx.Graph, network_name: str) -> dict[str, object]:
+    """Resume topología, fragmentación, cohesión y transitividad."""
+
+    n = graph.number_of_nodes()
+    m = graph.number_of_edges()
+    degrees = np.array([degree for _, degree in graph.degree()], dtype=float)
+    components = list(nx.connected_components(graph)) if n else []
+    largest = _largest_component(graph)
+    largest_n = largest.number_of_nodes()
+    global_connectivity = nx.node_connectivity(graph) if n > 1 else 0
+    largest_connectivity = nx.node_connectivity(largest) if largest_n > 1 else 0
+    articulation_count = (
+        sum(1 for _ in nx.articulation_points(graph)) if n > 1 else 0
+    )
+
+    return {
+        "network": network_name,
+        "nodes": n,
+        "edges": m,
+        "density": nx.density(graph) if n > 1 else 0.0,
+        "mean_degree": float(degrees.mean()) if n else 0.0,
+        "median_degree": float(np.median(degrees)) if n else 0.0,
+        "p90_degree": float(np.quantile(degrees, 0.90)) if n else 0.0,
+        "max_degree": int(degrees.max()) if n else 0,
+        "isolates": int(np.sum(degrees == 0)) if n else 0,
+        "leaves": int(np.sum(degrees == 1)) if n else 0,
+        "components": len(components),
+        "largest_component_nodes": largest_n,
+        "largest_component_share": largest_n / n if n else 0.0,
+        "node_connectivity": global_connectivity,
+        "largest_component_node_connectivity": largest_connectivity,
+        "transitivity": nx.transitivity(graph) if n >= 3 else 0.0,
+        "articulation_points": articulation_count,
+    }
+
+
+def degree_distribution(graph: nx.Graph, network_name: str) -> pd.DataFrame:
+    """Cuenta nodos para cada grado observado."""
+
+    distribution = (
+        pd.Series(dict(graph.degree()), dtype="int64")
+        .value_counts()
+        .sort_index()
+        .rename_axis("degree")
+        .reset_index(name="nodes")
+    )
+    distribution.insert(0, "network", network_name)
+    distribution["node_share"] = distribution["nodes"] / graph.number_of_nodes()
+    return distribution
+
+
+def detect_video_communities(
+    video_projection: nx.Graph, seed: int = 42
+) -> tuple[pd.DataFrame, list[set[str]], float, nx.Graph]:
+    """Detecta comunidades Louvain en videos con audiencia compartida.
+
+    Los videos aislados se excluyen del ajuste porque Louvain los convertiría
+    en comunidades unitarias sin evidencia de coparticipación.
+    """
+
+    active_nodes = [node for node, degree in video_projection.degree() if degree > 0]
+    active_graph = video_projection.subgraph(active_nodes).copy()
+    if active_graph.number_of_edges() == 0:
+        return (
+            pd.DataFrame(columns=["node_id", "community_id", "community_size"]),
+            [],
+            float("nan"),
+            active_graph,
+        )
+
+    communities = list(
+        nx.community.louvain_communities(active_graph, weight="weight", seed=seed)
+    )
+    communities.sort(key=lambda group: (-len(group), sorted(group)[0]))
+    rows = [
+        {"node_id": node, "community_id": community_id, "community_size": len(group)}
+        for community_id, group in enumerate(communities, start=1)
+        for node in sorted(group)
+    ]
+    membership = pd.DataFrame(rows)
+    modularity = nx.community.modularity(active_graph, communities, weight="weight")
+    return membership, communities, float(modularity), active_graph
+
+
+def centrality_table(graph: nx.Graph) -> pd.DataFrame:
+    """Calcula centralidades comparables e identifica puntos de articulación."""
+
+    authors = {n for n, data in graph.nodes(data=True) if data["node_type"] == "author"}
+    normalized_degree = nx.algorithms.bipartite.degree_centrality(graph, authors)
+    betweenness = nx.betweenness_centrality(graph, normalized=True, weight=None)
+    pagerank = nx.pagerank(graph, alpha=0.85, weight="weight")
+    articulation = set(nx.articulation_points(graph))
+
+    rows = []
+    for node, data in graph.nodes(data=True):
+        rows.append(
+            {
+                "node_id": node,
+                "node_type": data["node_type"],
+                "original_id": data.get("original_id"),
+                "label": data.get("label"),
+                "degree": int(graph.degree(node)),
+                "weighted_degree": int(graph.degree(node, weight="weight")),
+                "normalized_degree": float(normalized_degree[node]),
+                "betweenness": float(betweenness[node]),
+                "pagerank": float(pagerank[node]),
+                "is_articulation": node in articulation,
+            }
+        )
+    result = pd.DataFrame(rows)
+    result["betweenness_rank_within_type"] = result.groupby("node_type")["betweenness"].rank(
+        method="min", ascending=False
+    ).astype(int)
+    return result
+
+
+def save_advanced_network_tables(
+    author_projection: nx.Graph,
+    video_projection: nx.Graph,
+    metrics: pd.DataFrame,
+    distributions: pd.DataFrame,
+    communities: pd.DataFrame,
+    centralities: pd.DataFrame,
+) -> None:
+    """Guarda las tablas reconstruibles de los ejercicios 5–8."""
+
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    projection_edge_table(author_projection, "author-author").to_csv(
+        AUTHOR_PROJECTION_EDGES, index=False, encoding="utf-8"
+    )
+    projection_edge_table(video_projection, "video-video").to_csv(
+        VIDEO_PROJECTION_EDGES, index=False, encoding="utf-8"
+    )
+    metrics.to_csv(NETWORK_METRICS, index=False, encoding="utf-8")
+    distributions.to_csv(DEGREE_DISTRIBUTIONS, index=False, encoding="utf-8")
+    communities.to_csv(VIDEO_COMMUNITIES, index=False, encoding="utf-8")
+    centralities.to_csv(NODE_CENTRALITIES, index=False, encoding="utf-8")
