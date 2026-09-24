@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# CC3084 - datos crudos y generados de los laboratorios (grandes,
+# reproducibles con los scripts src/download_dataset.py o similares)
+*/data/raw/*.xlsx
+*/data/raw/*.sav
+*/data/processed/
+.ipynb_checkpoints/
+spark-warehouse/
+metastore_db/
+derby.log

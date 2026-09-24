@@ -1,0 +1,11 @@
+services:
+  spark-mllib:
+    build:
+      context: ./docker
+    container_name: cc3084-lab7-spark
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/opt/app/working_dir
+    environment:
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
