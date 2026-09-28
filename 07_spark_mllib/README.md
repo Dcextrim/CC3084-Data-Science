@@ -1,22 +1,14 @@
 # Laboratorio 7: Spark MLlib — Salarios ENEIC
 
-Práctica grupal de análisis exploratorio, segmentación (KMeans) y regresión
+Análisis exploratorio, segmentación (KMeans) y regresión
 (Regresión Lineal y Random Forest) con Apache Spark MLlib sobre las bases de
 Personas de la ENEIC (INE Guatemala). Se estima el salario mensual de
 personas asalariadas a partir de características personales y laborales.
-Ver el enunciado completo en
-[`laboratorio7-spark-mllib-2026.md`](laboratorio7-spark-mllib-2026.md).
-
-**Estado:** las 8 preguntas (análisis exploratorio + segmentación +
-modelado supervisado) están completas y ejecutadas en
-[`notebooks/laboratorio7-spark-mllib.ipynb`](notebooks/laboratorio7-spark-mllib.ipynb).
-Falta solo completar los nombres/carnés del equipo en la portada del
-notebook antes de entregar.
 
 ## Datos
 
-Los archivos crudos (`data/raw/`) se descargan directamente del INE y **no se
-versionan** (son grandes y reproducibles):
+Los archivos crudos (`data/raw/`) se descargan directamente del INE y no se
+versionan ya que son pesados pero reproducibles:
 
 | Archivo | Período | Uso |
 |---|---|---|
@@ -66,14 +58,11 @@ Dentro del contenedor, los datos crudos quedan montados en
 ├── models/              # Pipelines de ML guardados (no versionado)
 ├── docker/              # Dockerfile + requirements del contenedor
 ├── docker-compose.yml
-├── docs/
-│   └── Lab7-DataScience.docx   # informe del laboratorio
 ├── notebooks/
 │   └── laboratorio7-spark-mllib.ipynb
 ├── src/
 │   └── download_dataset.py
-├── codebook.md
-└── laboratorio7-spark-mllib-2026.md   # enunciado
+└── codebook.md
 ```
 
 ## Contenido del notebook
