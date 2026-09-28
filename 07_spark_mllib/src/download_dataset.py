@@ -1,7 +1,7 @@
 """
 Descarga las bases de Personas de la ENEIC (INE Guatemala) y sus
 diccionarios de datos hacia data/raw/. Los archivos no se versionan por su
-tamano (16-50 MB cada uno); este script los deja reproducibles.
+tamano.
 
 Fuente: https://www.ine.gob.gt/encuesta-nacional-de-empleo-e-ingresos/
 """
@@ -30,7 +30,7 @@ def main() -> None:
     for nombre, url in ARCHIVOS.items():
         destino = DIR_RAW / nombre
         if destino.exists():
-            print(f"ya existe, se omite: {nombre}")
+            print(f"ya existe: {nombre}")
             continue
         print(f"descargando {nombre} ...")
         urlretrieve(url, destino)
