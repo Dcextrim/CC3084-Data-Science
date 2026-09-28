@@ -35,7 +35,3 @@ def main() -> None:
         print(f"descargando {nombre} ...")
         urlretrieve(url, destino)
     print("listo.")
-
-
-if __name__ == "__main__":
-    main()

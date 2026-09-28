@@ -222,7 +222,9 @@ __marimo__/
 */data/raw/*.xlsx
 */data/raw/*.sav
 */data/processed/
+*/models/
 .ipynb_checkpoints/
 spark-warehouse/
 metastore_db/
 derby.log
+_debug_*.py
